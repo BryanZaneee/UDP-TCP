@@ -3,19 +3,23 @@ import java.net.*;
 import java.util.Random;
 
 public class TCPclient {
-    private static final String SERVER_ADDRESS = "localhost";
-    private static final int SERVER_PORT = 5927;
-
     public static void main(String[] args) {
+        if (args.length < 2) {
+            System.out.println("Usage: java TCPclient <server address> <server_port>");
+            return;
+        }
+
+        String SERVER_ADDRESS = args[0];
+        int SERVER_PORT = Integer.parseInt(args[1]);
+
         try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
              DataOutputStream output = new DataOutputStream(socket.getOutputStream());
              DataInputStream input = new DataInputStream(socket.getInputStream())) {
 
-            System.out.println("Client> Connected to the meme server.");
+            System.out.println("Client> Connected to the server.");
 
             Random random = new Random();
             long[] roundTripTimes = new long[10];
-            long[] tcpSetupTimes = new long[10];
 
             for (int i = 0; i < 10; i++) {
                 int memeNumber = random.nextInt(10) + 1;
@@ -23,15 +27,10 @@ public class TCPclient {
 
                 long startTime = System.nanoTime();
 
-                long tcpSetupStartTime = System.nanoTime();
-                socket.connect(new InetSocketAddress(SERVER_ADDRESS, SERVER_PORT));
-                long tcpSetupEndTime = System.nanoTime();
-                tcpSetupTimes[i] = tcpSetupEndTime - tcpSetupStartTime;
-
                 output.writeUTF(userInput);
                 output.flush();
 
-                byte[] memeData = new byte[1024 * 1024]; // Adjust buffer size as needed
+                byte[] memeData = new byte[1024 * 1024];
                 int bytesRead = input.read(memeData);
 
                 long endTime = System.nanoTime();
@@ -56,22 +55,11 @@ public class TCPclient {
             double meanRoundTrip = mean(roundTripTimes);
             double stdDevRoundTrip = stdDev(roundTripTimes);
 
-            long minTcpSetup = min(tcpSetupTimes);
-            long maxTcpSetup = max(tcpSetupTimes);
-            double meanTcpSetup = mean(tcpSetupTimes);
-            double stdDevTcpSetup = stdDev(tcpSetupTimes);
-
             System.out.println("\nRound Trip Time Statistics (in nanoseconds):");
             System.out.println("Minimum: " + minRoundTrip);
             System.out.println("Maximum: " + maxRoundTrip);
             System.out.println("Mean: " + meanRoundTrip);
             System.out.println("Standard Deviation: " + stdDevRoundTrip);
-
-            System.out.println("\nTCP Setup Time Statistics (in nanoseconds):");
-            System.out.println("Minimum: " + minTcpSetup);
-            System.out.println("Maximum: " + maxTcpSetup);
-            System.out.println("Mean: " + meanTcpSetup);
-            System.out.println("Standard Deviation: " + stdDevTcpSetup);
 
         } catch (UnknownHostException ex) {
             System.out.println("Client> Server not found: " + ex.getMessage());

@@ -1,12 +1,19 @@
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class UDPclient {
-    private static final String SERVER_ADDRESS = "localhost";
-    private static final int SERVER_PORT = 5927;
-
     public static void main(String[] args) {
+        if (args.length < 2) {
+            System.out.println("Usage: java UDPClient <server address> <server_port>");
+            return;
+        }
+
+        String SERVER_ADDRESS = args[0];
+        int SERVER_PORT = Integer.parseInt(args[1]);
+
         try (DatagramSocket socket = new DatagramSocket()) {
             InetAddress serverAddress = InetAddress.getByName(SERVER_ADDRESS);
 

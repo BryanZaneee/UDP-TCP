@@ -2,9 +2,17 @@ import java.io.*;
 import java.net.*;
 
 public class UDPserver {
-    private static final int PORT = 5927;
 
     public static void main(String[] args) {
+        // Check if the port number is provided as an argument
+        if (args.length != 1) {
+            System.out.println("Usage: java UDPServer <port>");
+            return;
+        }
+
+        // Parse the port number from the command-line arguments
+        int PORT = Integer.parseInt(args[0]);
+        
         try (DatagramSocket serverSocket = new DatagramSocket(PORT)) {
             System.out.println("Server is listening on port " + PORT);
 
