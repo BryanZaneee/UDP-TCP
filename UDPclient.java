@@ -1,7 +1,5 @@
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 public class UDPclient {
@@ -16,82 +14,56 @@ public class UDPclient {
 
         try (DatagramSocket socket = new DatagramSocket()) {
             InetAddress serverAddress = InetAddress.getByName(SERVER_ADDRESS);
-
             System.out.println("Client> Connected to the meme server.");
 
-            // Perform 10 measurements randomly
             Random random = new Random();
             long[] roundTripTimes = new long[10];
-            long[] dnsLookupTimes = new long[10];
 
             for (int i = 0; i < 10; i++) {
-                // Generate a random meme number between 1 and 10
-                int memeNumber = random.nextInt(10) + 1;
+                int memeNumber = i + 1;
                 String userInput = String.valueOf(memeNumber);
-
-                long startTime = System.nanoTime();
-
-                // Measure DNS lookup time
-                long dnsStartTime = System.nanoTime();
-                InetAddress.getByName(SERVER_ADDRESS);
-                long dnsEndTime = System.nanoTime();
-                dnsLookupTimes[i] = dnsEndTime - dnsStartTime;
-
                 byte[] sendData = userInput.getBytes();
                 DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, SERVER_PORT);
+                
+                long startTime = System.nanoTime();
                 socket.send(sendPacket);
 
-                byte[] receiveData = new byte[1024];
+                // Prepare a buffer for receiving potentially large data
+                byte[] receiveData = new byte[65507];  // Maximum UDP datagram size
                 DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
                 socket.receive(receivePacket);
-
                 long endTime = System.nanoTime();
                 roundTripTimes[i] = endTime - startTime;
 
-                String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                System.out.println("Client> Received from server: \"" + response + "\"");
+                // Write the received data (image) to a file
+                try (FileOutputStream fos = new FileOutputStream("received_meme_" + memeNumber + ".jpg")) {
+                    fos.write(receivePacket.getData(), 0, receivePacket.getLength());
+                    System.out.println("Client> Meme image received and saved: received_meme_" + memeNumber + ".jpg");
+                } catch (IOException e) {
+                    System.out.println("Client> Error saving the received meme image: " + e.getMessage());
+                }
             }
 
-            // Send "bye" command to server
-            String byeCommand = "bye";
-            byte[] sendData = byeCommand.getBytes();
-            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, SERVER_PORT);
-            socket.send(sendPacket);
+            // Send a "bye" message to the server
+            byte[] byeData = "bye".getBytes();
+            DatagramPacket byePacket = new DatagramPacket(byeData, byeData.length, serverAddress, SERVER_PORT);
+            socket.send(byePacket);
 
-            // Receive server's response
-            byte[] receiveData = new byte[1024];
-            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-            socket.receive(receivePacket);
-            String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
-            if ("disconnected".equalsIgnoreCase(response)) {
-                System.out.println("Client> exit");
+            // Await confirmation of disconnection
+            byte[] byeResponse = new byte[1024];
+            DatagramPacket byeReceivePacket = new DatagramPacket(byeResponse, byeResponse.length);
+            socket.receive(byeReceivePacket);
+            String response = new String(byeReceivePacket.getData(), 0, byeReceivePacket.getLength());
+            if ("disconnected".equalsIgnoreCase(response.trim())) {
+                System.out.println("Client> Disconnected from the server.");
             }
 
-            // Calculate and display statistics
-            long minRoundTrip = min(roundTripTimes);
-            long maxRoundTrip = max(roundTripTimes);
-            double meanRoundTrip = mean(roundTripTimes);
-            double stdDevRoundTrip = stdDev(roundTripTimes);
-
-            // Calculate and display DNS lookup statistics
-            long minDnsLookup = min(dnsLookupTimes);
-            long maxDnsLookup = max(dnsLookupTimes);
-            double meanDnsLookup = mean(dnsLookupTimes);
-            double stdDevDnsLookup = stdDev(dnsLookupTimes);
-
-            // Display statistics
+            // Output round-trip time statistics
             System.out.println("\nRound Trip Time Statistics (in nanoseconds):");
-            System.out.println("Minimum: " + minRoundTrip);
-            System.out.println("Maximum: " + maxRoundTrip);
-            System.out.println("Mean: " + meanRoundTrip);
-            System.out.println("Standard Deviation: " + stdDevRoundTrip);
-
-            // Display DNS lookup statistics
-            System.out.println("\nDNS Lookup Time Statistics (in nanoseconds):");
-            System.out.println("Minimum: " + minDnsLookup);
-            System.out.println("Maximum: " + maxDnsLookup);
-            System.out.println("Mean: " + meanDnsLookup);
-            System.out.println("Standard Deviation: " + stdDevDnsLookup);
+            System.out.println("Minimum: " + min(roundTripTimes));
+            System.out.println("Maximum: " + max(roundTripTimes));
+            System.out.println("Mean: " + mean(roundTripTimes));
+            System.out.println("Standard Deviation: " + stdDev(roundTripTimes));
 
         } catch (UnknownHostException ex) {
             System.out.println("Client> Server not found: " + ex.getMessage());
@@ -100,7 +72,6 @@ public class UDPclient {
         }
     }
 
-    // Helper methods for calculating min
     private static long min(long[] values) {
         long min = Long.MAX_VALUE;
         for (long value : values) {
@@ -110,8 +81,7 @@ public class UDPclient {
         }
         return min;
     }
-    
-    // Helper methods for calculating max
+
     private static long max(long[] values) {
         long max = Long.MIN_VALUE;
         for (long value : values) {
@@ -122,7 +92,6 @@ public class UDPclient {
         return max;
     }
 
-    // Helper methods for calculating mean
     private static double mean(long[] values) {
         double sum = 0;
         for (long value : values) {
@@ -131,13 +100,11 @@ public class UDPclient {
         return sum / values.length;
     }
 
-    // Helper methods for calculating standard deviation
     private static double stdDev(long[] values) {
         double mean = mean(values);
         double sumSquaredDiff = 0;
         for (long value : values) {
-            double diff = value - mean;
-            sumSquaredDiff += diff * diff;
+            sumSquaredDiff += (value - mean) * (value - mean);
         }
         return Math.sqrt(sumSquaredDiff / values.length);
     }

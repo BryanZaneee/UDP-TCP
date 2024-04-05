@@ -1,6 +1,5 @@
 import java.io.*;
 import java.net.*;
-import java.util.Random;
 
 public class TCPclient {
     public static void main(String[] args) {
@@ -17,12 +16,10 @@ public class TCPclient {
              DataInputStream input = new DataInputStream(socket.getInputStream())) {
 
             System.out.println("Client> Connected to the server.");
-
-            Random random = new Random();
             long[] roundTripTimes = new long[10];
 
             for (int i = 0; i < 10; i++) {
-                int memeNumber = random.nextInt(10) + 1;
+                int memeNumber = i + 1;
                 String userInput = String.valueOf(memeNumber);
 
                 long startTime = System.nanoTime();
@@ -30,26 +27,34 @@ public class TCPclient {
                 output.writeUTF(userInput);
                 output.flush();
 
-                byte[] memeData = new byte[1024 * 1024];
-                int bytesRead = input.read(memeData);
+                // Assume the server sends the filename (which the client ignores) followed by the file size
+                String ignoredFilename = input.readUTF();
+                int fileSize = input.readInt();
+                byte[] memeData = new byte[fileSize];
+                int bytesRead = 0;
+                int result;
+                while (bytesRead < fileSize && (result = input.read(memeData, bytesRead, fileSize - bytesRead)) != -1) {
+                    bytesRead += result;
+                }
 
                 long endTime = System.nanoTime();
                 roundTripTimes[i] = endTime - startTime;
 
-                if (bytesRead > 0) {
+                if (bytesRead == fileSize) {
                     String memeFilename = "received_meme_" + memeNumber + ".jpg";
-                    FileOutputStream fileOutput = new FileOutputStream(memeFilename);
-                    fileOutput.write(memeData, 0, bytesRead);
-                    fileOutput.close();
-                    System.out.println("Client> Received meme: " + memeFilename);
+                    try (FileOutputStream fileOutput = new FileOutputStream(memeFilename)) {
+                        fileOutput.write(memeData, 0, fileSize);
+                        System.out.println("Client> Received meme: " + memeFilename);
+                    }
                 } else {
-                    System.out.println("Client> Received empty response.");
+                    System.out.println("Client> Incomplete image received for meme: " + memeNumber);
                 }
             }
 
             output.writeUTF("bye");
             output.flush();
 
+            // Calculate and display round trip time statistics
             long minRoundTrip = min(roundTripTimes);
             long maxRoundTrip = max(roundTripTimes);
             double meanRoundTrip = mean(roundTripTimes);
