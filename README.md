@@ -18,8 +18,8 @@ The TCP server threads each connection and frames the response as filename,
 byte count, then bytes. The UDP server replies with a single datagram per
 request, which is why large images are where the two protocols diverge.
 
-Both servers read from `memes/meme<n>.jpg` and answer `bye` with
-`disconnected`.
+Both servers read from `memes/meme<n>.jpg`. On `bye` the UDP server replies
+`disconnected`; the TCP server just closes the connection.
 
 ## Installation
 
